@@ -1,0 +1,32 @@
+---
+# tasks file for ansible-role-upgrade-packages
+
+- name: Check if there are packages available to be installed/upgraded
+  command: /usr/lib/update-notifier/apt-check --package-names
+  register: packages
+  changed_when: false
+  always_run: yes
+  ignore_errors: true
+
+- name: Display upgradeable packages
+  debug: msg="packages={{ packages.stderr.split('\n') }}"
+
+- name: Upgrade all packages to the latest version
+  package: upgrade=safe install_recommends=no update_cache=yes cache_valid_time=3600
+  #when: packages.stderr != ""
+
+- name: Check if a reboot is required
+  stat: path=/var/run/reboot-required get_md5=no
+  register: reboot_required_file
+- debug: var=reboot_required_file.stat.exists
+- debug: var=reboot_if_required|bool
+
+- name: Reboot the server
+  command: 'shutdown -r now "Ansible updates triggered"'
+  ignore_errors: true
+  when: reboot_required_file.stat.exists and reboot_if_required|bool
+
+- name: Waiting for server to come back
+  local_action: wait_for host={{ inventory_hostname }} port=22 state=started delay=30 timeout=300
+  become: false
+  when: reboot_required_file.stat.exists and reboot_if_required|bool
