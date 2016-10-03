@@ -1,15 +1,22 @@
 ---
 # tasks file for ansible-role-upgrade-packages
 
+- name: Check for dependencies
+  stat: path=/usr/lib/update-notifier/apt-check
+  register: apt_check_file
+
 - name: Check if there are packages available to be installed/upgraded
   command: /usr/lib/update-notifier/apt-check --package-names
   register: packages
   changed_when: false
   always_run: yes
   ignore_errors: true
+  when: apt_check_file.stat.exists == True
 
-- name: Display upgradeable packages
-  debug: msg="packages={{ packages.stderr.split('\n') }}"
+- name: Show upgradeable packages
+  debug: msg="{{ packages.stderr.split('\n') }}"
+  ignore_errors: true
+  when: packages|succeeded and not packages|skipped
 
 - name: Upgrade all packages to the latest version
   package: upgrade=safe install_recommends=no update_cache=yes cache_valid_time=3600
