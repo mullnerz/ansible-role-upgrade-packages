@@ -2,11 +2,13 @@
 # tasks file for ansible-role-upgrade-packages
 
 - name: Check for dependencies
-  stat: path=/usr/lib/update-notifier/apt-check
+  #stat: path=/usr/lib/update-notifier/apt-check
+  stat: path=/usr/bin/apt
   register: apt_check_file
 
 - name: Check if there are packages available to be installed/upgraded
   command: /usr/lib/update-notifier/apt-check --package-names
+  #command: apt list --upgradable
   register: packages
   changed_when: false
   always_run: yes
