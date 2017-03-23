@@ -27,8 +27,6 @@
 
 - name: Upgrade all packages to the latest version
   package: upgrade=safe install_recommends=no update_cache=yes cache_valid_time=3600
-  async: 600
-  poll: 0
   #when: packages.stderr != ""
 
 - name: Check if a reboot is required
