@@ -1,39 +1,36 @@
 ---
 # tasks file for ansible-role-upgrade-packages
 
-- name: Check for dependencies
-  stat: path=/usr/lib/update-notifier/apt-check
-  #stat: path=/usr/bin/apt
-  register: apt_check_file
+- name: Install required packages (Ubuntu)
+  apt: name=aptitude state=present
+  when: (ansible_distribution == 'Ubuntu')
 
-- name: Check if there are packages available to upgrade
-  command: /usr/lib/update-notifier/apt-check --package-names
-  #command: apt list --upgradable
-  register: packages
+- name: Check for dependencies (Ubuntu)
+  stat: path=/usr/lib/update-notifier/apt-check
+  register: apt_check_file
+  when: (ansible_distribution == 'Ubuntu')
+
+- name: Check if there are packages available to upgrade (Ubuntu)
+  shell: /usr/lib/update-notifier/apt-check --package-names
+  register: available_packages
   changed_when: false
   check_mode: no
   ignore_errors: true
   when: apt_check_file.stat.exists == True
-
-# FIX: Ubuntu 16.04 LTS doesn't come with certain modules, required by ansible
-- name: Install needed packages
-  apt: name=aptitude state=present
-  when: (ansible_distribution == 'Ubuntu')
+        and (ansible_distribution == 'Ubuntu')
 
 - name: Show upgradeable packages
-  debug: msg="{{ packages.stderr.split('\n') }}"
+  debug: msg="{{ available_packages.stderr.split('\n') }}"
   ignore_errors: true
-  when: packages is succeeded and not packages is skipped
+  when: available_packages is succeeded and not available_packages is skipped
 
 - name: Upgrade all packages to the latest version (Debian)
   apt: upgrade=safe install_recommends=no update_cache=yes cache_valid_time=3600
   when: (ansible_os_family == 'Debian')
-  #when: packages.stderr != ""
 
 - name: Autoremove old unused packages (Debian)
   apt: autoremove=yes force=yes
   when: (ansible_os_family == 'Debian')
-  #when: packages.stderr != ""
 
 - name: Upgrade all packages to the latest version (RedHat)
   yum: name=* state=latest update_cache=yes 
@@ -46,7 +43,6 @@
 - debug: var=reboot_if_required|bool
 
 - name: Reboot the server
-  #command: 'shutdown -r now "Ansible updates triggered"'
   shell: sleep 3 && shutdown -r now "Ansible updates triggered"
   async: 10
   poll: 0
