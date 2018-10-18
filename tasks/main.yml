@@ -46,11 +46,13 @@
   shell: sleep 3 && shutdown -r now "Ansible updates triggered"
   async: 10
   poll: 0
-  ignore_errors: true
-  register: rebooted
   when: reboot_required_file.stat.exists and reboot_if_required|bool
 
 - name: Waiting for server to come back
-  local_action: wait_for host={{ inventory_hostname }} port=22 state=started delay=30 timeout=300
-  become: false
-  when: reboot_required_file.stat.exists and reboot_if_required|bool and rebooted
+  #wait_for: host={{ inventory_hostname }} port=22 state=started delay=30 timeout=300
+  #delegate_to: localhost
+  #become: false
+  wait_for_connection:
+    delay: 30
+    timeout: 300
+  #when: reboot_required_file.stat.exists and reboot_if_required|bool
